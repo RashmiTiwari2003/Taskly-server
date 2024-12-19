@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "npm i && tsc && npx prisma generate",
+    "build": "prisma generate && npm i && tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon --watch src src/app.ts",
-    "start": "node ./dist/app.js"
+    "start": "node ./dist/app.js",
+    "postinstall": "prisma generate"
   },
   "author": "",
   "license": "ISC",
