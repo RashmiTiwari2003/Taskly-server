@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SuperAdmin
+  Admin
+  User
+}
+
+model User {
+  id            String    @id @default(uuid()) @map("_id")
+  name          String
+  role          Role
+  phone         String?
+  email         String    @unique
+  profileUpdate Boolean
+  password      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String?
+  businessId    String?
+  Business      Business? @relation(fields: [businessId], references: [id])
+
+  @@index([createdById])
+}
+
+model Business {
+  id         String    @id @default(uuid()) @map("_id")
+  name       String    @unique
+  adminName  String
+  adminEmail String    @unique
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  users      User[]
+  columns    Columns[]
+}
+
+model Tasks {
+  id               String    @id @default(uuid()) @map("_id")
+  name             String
+  content          String
+  columnId         String
+  Column           Columns   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignedByEmail  String    @default("")
+  assignedToEmails String[]  @default([])
+  startDate        DateTime? @db.Timestamp
+  dueDate          DateTime? @db.Timestamp
+}
+
+model Columns {
+  id         String   @id @default(uuid()) @map("_id")
+  name       String
+  Tasks      Tasks[]
+  order      Int
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+}
