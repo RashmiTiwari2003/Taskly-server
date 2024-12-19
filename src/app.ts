@@ -87,24 +87,37 @@ app.post('/validateToken', validateTokenRouter, async (req: CustomRequest, res: 
 app.get('/findUser/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const user = await findUserByID(id);
+    try {
+        const user = await findUserByID(id);
 
-    if (user) {
-        res.status(200).json({ message: 'Success', email: user.email });
+        if (user) {
+            res.status(200).json({ message: 'Success', email: user.email });
+            return;
+        }
+
+        res.status(400).json({ message: 'Error user with id' });
+    } catch (error) {
+        console.log('Error finding all user');
+        res.status(500).json({ message: 'Error occured' });
         return;
     }
-
-    res.status(400).json({ message: 'Error finding all user' });
 })
 
 app.get('/users', async (req: Request, res: Response) => {
-    const users = await findAllUsers();
-    if (users) {
-        res.status(200).json({ message: 'Success', users });
+    try {
+        const users = await findAllUsers();
+
+        if (users) {
+            res.status(200).json({ message: 'Success', users });
+            return;
+        }
+
+        res.status(400).json({ message: 'Error finding all Users' });
+    } catch (error) {
+        console.log('Error finding all user');
+        res.status(500).json({ message: 'Error occured' });
         return;
     }
-
-    res.status(400).json({ message: 'Error finding all Users' });
 })
 
 app.get('/usersbusiness/:email', async (req: Request, res: Response) => {
@@ -128,165 +141,193 @@ app.get('/usersbusiness/:email', async (req: Request, res: Response) => {
 })
 
 app.post('/createUser', async (req: CustomRequest, res: Response) => {
-    const { payload } = req.body
-    const { name, email, phone, password, role, businessName } = payload;
+    try {
+        const { payload } = req.body
+        const { name, email, phone, password, role, businessName } = payload;
 
-    if (!name || !email || !password || !role || !businessName) {
-        res.status(404).json({ message: 'Missing Fields' });
-        return;
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10)
-
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-        res.status(400).json({ message: 'User already exists' })
-        return;
-    }
-
-    if (role === Role.SuperAdmin) {
-        superAdminRouter(req, res, async () => {
-            const user = await createUser(name, email, phone, hashedPassword, role, businessName, req.creatorId)
-
-            if (!user) {
-                res.status(400).json({ message: 'Error ocurred: User not created' })
-                return;
-            }
-
-            res.status(200).json({ message: 'User created successfully', id: user.id })
+        if (!name || !email || !password || !role || !businessName) {
+            res.status(404).json({ message: 'Missing Fields' });
             return;
-        })
-    } else {
-        adminRouter(req, res, async () => {
-            const user = await createUser(name, email, phone, hashedPassword, role, businessName, req.creatorId)
+        }
 
-            if (!user) {
-                res.status(400).json({ message: 'Error ocurred: User not created' })
-                return;
-            }
+        const hashedPassword = await bcrypt.hash(password, 10)
 
-            res.status(200).json({ message: 'User created successfully', id: user.id })
+        const existingUser = await findUserByEmail(email);
+        if (existingUser) {
+            res.status(400).json({ message: 'User already exists' })
             return;
-        })
+        }
+
+        if (role === Role.SuperAdmin) {
+            superAdminRouter(req, res, async () => {
+                const user = await createUser(name, email, phone, hashedPassword, role, businessName, req.creatorId)
+
+                if (!user) {
+                    res.status(400).json({ message: 'Error ocurred: User not created' })
+                    return;
+                }
+
+                res.status(200).json({ message: 'User created successfully', id: user.id })
+                return;
+            })
+        } else {
+            adminRouter(req, res, async () => {
+                const user = await createUser(name, email, phone, hashedPassword, role, businessName, req.creatorId)
+
+                if (!user) {
+                    res.status(400).json({ message: 'Error ocurred: User not created' })
+                    return;
+                }
+
+                res.status(200).json({ message: 'User created successfully', id: user.id })
+                return;
+            })
+        }
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ message: 'Error creating user' });
     }
 })
 
 app.post('/edit', async (req: CustomRequest, res: Response) => {
-    const { payload, userEmail } = req.body;
+    try {
+        const { payload, userEmail } = req.body;
 
-    const findUser = await findUserByEmail(userEmail);
+        const findUser = await findUserByEmail(userEmail);
 
-    const role = findUser.role;
+        const role = findUser.role;
 
-    if (role === Role.SuperAdmin) {
-        superAdminRouter(req, res, async () => {
-            const user = await updateUser(payload, userEmail);
+        if (role === Role.SuperAdmin) {
+            superAdminRouter(req, res, async () => {
+                const user = await updateUser(payload, userEmail);
 
-            if (!user) {
-                res.json(400).json({ message: 'Error updating User' })
-            }
-            res.status(200).json({
-                message: 'User Info updated successfully', user: {
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    phone: user.phone,
-                },
+                if (!user) {
+                    res.json(400).json({ message: 'Error updating User' })
+                }
+                res.status(200).json({
+                    message: 'User Info updated successfully', user: {
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        phone: user.phone,
+                    },
+                })
             })
-        })
-    } else {
-        adminRouter(req, res, async () => {
-            const user = await updateUser(payload, userEmail);
+        } else {
+            adminRouter(req, res, async () => {
+                const user = await updateUser(payload, userEmail);
 
-            if (!user) {
-                res.json(400).json({ message: 'Error updating User' })
-            }
-            res.status(200).json({
-                message: 'User Info updated successfully', user: {
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    phone: user.phone,
-                },
+                if (!user) {
+                    res.json(400).json({ message: 'Error updating User' })
+                }
+                res.status(200).json({
+                    message: 'User Info updated successfully', user: {
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        phone: user.phone,
+                    },
+                })
             })
-        })
+        }
+    } catch (error) {
+        console.error('Error editing users:', error);
+        res.status(500).json({ message: 'Error editing users' });
     }
 })
 
 app.post('/update', async (req: Request, res: Response) => {
-    const { payload, email } = req.body;
-    const { password } = payload;
-    if (password) {
-        const hashedPassword = await bcrypt.hash(password, 10)
-        payload.password = hashedPassword
+    try {
+
+        const { payload, email } = req.body;
+        const { password } = payload;
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, 10)
+            payload.password = hashedPassword
+        }
+        console.log(payload, email);
+        const user = await updateUser(payload, email);
+        const business = await findBusinessByID(user.businessId)
+        if (!user) {
+            res.json(400).json({ message: 'Error updating User' })
+        }
+        res.status(200).json({
+            message: 'User Info updated successfully', user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                phone: user.phone,
+                businessName: business.name
+            },
+        })
+    } catch (error) {
+        console.error('Error updating users:', error);
+        res.status(500).json({ message: 'Error updating users' });
     }
-    console.log(payload, email);
-    const user = await updateUser(payload, email);
-    const business = await findBusinessByID(user.businessId)
-    if (!user) {
-        res.json(400).json({ message: 'Error updating User' })
-    }
-    res.status(200).json({
-        message: 'User Info updated successfully', user: {
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone,
-            businessName: business.name
-        },
-    })
 })
 
 app.post('/me', async (req: Request, res: Response) => {
-    const { token } = req.body;
+    try {
 
-    if (!token) {
-        console.log('Invalid token');
-        res.status(500).json({ message: 'Invalid token' });
-        return;
-    }
+        const { token } = req.body;
 
-    const data = jwt.verify(token, SECRET) as User;
-    const user = await findUserByEmail(data.email)
-
-    const business = await findBusinessByID(user.businessId)
-
-    res.status(200).json({
-        user: {
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone,
-            businessName: business.name
+        if (!token) {
+            console.log('Invalid token');
+            res.status(500).json({ message: 'Invalid token' });
+            return;
         }
-    })
+
+        const data = jwt.verify(token, SECRET) as User;
+        const user = await findUserByEmail(data.email)
+
+        const business = await findBusinessByID(user.businessId)
+
+        res.status(200).json({
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                phone: user.phone,
+                businessName: business.name
+            }
+        })
+    } catch (error) {
+        console.error('Error fetching logged user details:', error);
+        res.status(500).json({ message: 'Error fetching logged user details' });
+    }
 })
 
 app.delete('/delete/:userEmail', adminRouter, async (req: CustomRequest, res: Response) => {
-    const { userEmail } = req.params;
+    try {
 
-    const findUser = await findUserByEmail(userEmail);
+        const { userEmail } = req.params;
 
-    const role = findUser.role;
+        const findUser = await findUserByEmail(userEmail);
 
-    if (role === Role.SuperAdmin) {
-        superAdminRouter(req, res, async () => {
-            const user = await deleteUser(userEmail);
+        const role = findUser.role;
 
-            if (!user) {
-                res.json(400).json({ message: 'Error deleting User' })
-            }
-            res.status(200).json({ message: 'User deleted successfully' })
-        })
-    } else {
-        adminRouter(req, res, async () => {
-            const user = await deleteUser(userEmail);
+        if (role === Role.SuperAdmin) {
+            superAdminRouter(req, res, async () => {
+                const user = await deleteUser(userEmail);
 
-            if (!user) {
-                res.json(400).json({ message: 'Error deleting User' })
-            }
-            res.status(200).json({ message: 'User deleted successfully' })
-        })
+                if (!user) {
+                    res.json(400).json({ message: 'Error deleting User' })
+                }
+                res.status(200).json({ message: 'User deleted successfully' })
+            })
+        } else {
+            adminRouter(req, res, async () => {
+                const user = await deleteUser(userEmail);
+
+                if (!user) {
+                    res.json(400).json({ message: 'Error deleting User' })
+                }
+                res.status(200).json({ message: 'User deleted successfully' })
+            })
+        }
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Error deleting user' });
     }
 })
 
@@ -309,33 +350,36 @@ app.get('/columns/:email', async (req: Request, res: Response) => {
 })
 
 app.post('/columns', adminRouter, async (req: CustomRequest, res: Response) => {
-    const { payload } = req.body
-    let { name, index } = payload
+    try {
+        const { payload } = req.body
+        let { name, index } = payload
 
-    if (index === undefined) {
-        const count = await countColumns();
-        index = count;
-    }
+        if (index === undefined) {
+            const count = await countColumns();
+            index = count;
+        }
 
-    const creator = await findUserByEmail(req.user.email)
+        const creator = await findUserByEmail(req.user.email)
 
-    const column = await createColumn(name, creator.email, creator.businessId, index)
+        const column = await createColumn(name, creator.email, creator.businessId, index)
 
-    if (!column) {
-        res.status(400).json({ message: 'Error ocurred: Column not created' })
+        if (!column) {
+            res.status(400).json({ message: 'Error ocurred: Column not created' })
+            return;
+        }
+
+        res.status(200).json({ message: 'Column created successfully', column })
         return;
+    } catch (error) {
+        console.error('Error creating column:', error);
+        res.status(500).json({ message: 'Error creating column' });
     }
-
-    res.status(200).json({ message: 'Column created successfully', column })
-    return;
 })
 
 app.patch('/columnName', adminRouter, async (req: CustomRequest, res: Response) => {
     const { payload } = req.body;
     const { id, name } = payload
     try {
-
-
         const column = await updateColumnName(id, name);
 
         if (column) {
@@ -437,21 +481,27 @@ app.get('/tasks/:taskId', async (req: Request, res: Response) => {
 })
 
 app.post('/tasks', adminRouter, async (req: CustomRequest, res: Response) => {
-    const { payload, columnId } = req.body;
+    try {
 
-    const { name, content } = payload;
+        const { payload, columnId } = req.body;
 
-    const creator = await findUserByEmail(req.user.email)
+        const { name, content } = payload;
 
-    const task = await createTask(name, content, columnId, creator.email)
+        const creator = await findUserByEmail(req.user.email)
 
-    if (!task) {
-        res.status(400).json({ message: 'Error ocurred: Task not created' })
+        const task = await createTask(name, content, columnId, creator.email)
+
+        if (!task) {
+            res.status(400).json({ message: 'Error ocurred: Task not created' })
+            return;
+        }
+
+        res.status(200).json({ message: 'Task created successfully' })
         return;
+    } catch (error) {
+        console.error('Error creating tasks:', error);
+        res.status(500).json({ message: 'Error creating tasks' });
     }
-
-    res.status(200).json({ message: 'Task created successfully' })
-    return;
 })
 
 app.put('/tasks/:taskId', async (req: Request, res: Response) => {
@@ -484,14 +534,19 @@ app.put('/tasks/:taskId', async (req: Request, res: Response) => {
 })
 
 app.delete('/tasks/:taskId', adminRouter, async (req: CustomRequest, res: Response) => {
-    const { taskId } = req.params;
+    try {
+        const { taskId } = req.params;
 
-    const task = await deleteTask(taskId);
+        const task = await deleteTask(taskId);
 
-    if (!task) {
-        res.json(400).json({ message: 'Error deleting Task' })
+        if (!task) {
+            res.json(400).json({ message: 'Error deleting Task' })
+        }
+        res.status(200).json({ message: 'Task deleted successfully' })
+    } catch (error) {
+        console.error('Error deleting tasks:', error);
+        res.status(500).json({ message: 'Error deleting tasks' });
     }
-    res.status(200).json({ message: 'Task deleted successfully' })
 })
 
 app.listen(PORT, () => {
