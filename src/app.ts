@@ -555,7 +555,7 @@ app.put('/tasks/:taskId', async (req: Request, res: Response) => {
             if (unmatchedEmails && unmatchedEmails.length > 0) {
                 try {
                     await assignedTaskMail(unmatchedEmails, payload.name, payload.assignedByEmail)
-                    console.log("Task Alert Sent")
+                    console.log("Task Alert Sent to Users")
                 } catch (error) {
                     console.log("Error sending task alert")
                 }
