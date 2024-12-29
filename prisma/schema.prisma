@@ -49,15 +49,15 @@ model Business {
 }
 
 model Tasks {
-  id               String    @id @default(uuid()) @map("_id")
+  id               String   @id @default(uuid()) @map("_id")
   name             String
   content          String
   columnId         String
-  Column           Columns   @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  assignedByEmail  String    @default("")
-  assignedToEmails String[]  @default([])
-  startDate        DateTime? @db.Timestamp
-  dueDate          DateTime? @db.Timestamp
+  Column           Columns  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignedByEmail  String   @default("")
+  assignedToEmails String[] @default([])
+  startDate        DateTime @default(now()) @db.Date
+  dueDate          DateTime @default(now()) @db.Date
 }
 
 model Columns {

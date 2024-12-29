@@ -1,5 +1,6 @@
 import { PrismaClient, Role } from "@prisma/client";
 import dotenv from 'dotenv';
+import transporter from "./utils/nodeMailer";
 
 dotenv.config();
 
@@ -385,4 +386,53 @@ export const disconnectDB = async () => {
     } catch (error) {
         console.log('Error discnnecting from database: ', error.message);
     }
+}
+
+export async function sendWelcomeMail(email: string, name: string, loginLink: string): Promise<void> {
+    const textBody = `Hey ${name},
+        
+Welcome to Taskly - we're thrilled to have you on board! 🚀
+
+Our platform is designed to help you stay organized, collaborate effectively, and achieve your goals effortlessly. Whether you're managing personal tasks or working with a team, we've got the tools to make your workflow smooth and efficient.
+
+- Log in to your account: ${loginLink}
+- Create your first task: Click on the “New Task” button to get started with your to-dos.
+- Explore features: Discover tools like drag-and-drop task boards, due dates, and team collaboration.
+
+If you ever need assistance or have any questions, feel free to reach out to our support team at ${process.env.EMAIL_USER}. We're here to help!
+
+Let's make great things happen together! 🎯
+Happy tasking,
+The Taskly Team`;
+
+    const info = await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: `${email}`,
+        subject: 'Welcome to Taskly',
+        text: textBody
+    });
+}
+
+export async function assignedTaskMail(emails: string[], taskName: string,assignedByEmail:string) {
+    const emailBody = `Hello,
+
+You have been assigned a new task!
+
+**Task Name:** ${taskName}
+**Assigned By:** ${assignedByEmail}
+
+To get started, log in to your Taskly account and check your task list.
+`;
+
+const formattedBody = emailBody
+    .replace(/\*\*(.*?)\*\*/g, `<b>$1</b>`)
+    .replace(/\n/g, `<br>`);
+
+    const info = await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: emails.join(","),
+        subject: 'New Task assigned',
+        text: emailBody,
+        html: formattedBody
+    });
 }

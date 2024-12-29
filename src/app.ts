@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { connectDB, createUser, findUserByEmail, updateUser, User, findAllUsers, deleteUser, getAllColumns, findBusinessByID, createColumn, createTask, deleteColumn, editTask, getTask, deleteTask, updateColumn, findUserByID, prisma, countColumns, decrementColumnIndex, incrementColumnIndex, getColumn, decrementColumnIndexDelete, updateColumnName, findAllUsersInBusiness } from "./db";
+import { connectDB, createUser, findUserByEmail, updateUser, User, findAllUsers, deleteUser, getAllColumns, findBusinessByID, createColumn, createTask, deleteColumn, editTask, getTask, deleteTask, updateColumn, findUserByID, prisma, countColumns, decrementColumnIndex, incrementColumnIndex, getColumn, decrementColumnIndexDelete, updateColumnName, findAllUsersInBusiness, sendWelcomeMail, assignedTaskMail } from "./db";
 import { Role } from '@prisma/client';
 import adminRouter from './middleware/admin_middleware';
 import superAdminRouter from './middleware/superadmin_middleware';
@@ -169,7 +169,15 @@ app.post('/createUser', async (req: CustomRequest, res: Response) => {
                     return;
                 }
 
+                const loginLink = `${process.env.CLIENT_URL}/login/${user.id}`
+
                 res.status(200).json({ message: 'User created successfully', id: user.id })
+                try {
+                    await sendWelcomeMail(email, name, loginLink)
+                    console.log("Welcome Email sent successfully")
+                } catch (error) {
+                    console.log("Error sending new User Email")
+                }
                 return;
             })
         } else {
@@ -181,7 +189,15 @@ app.post('/createUser', async (req: CustomRequest, res: Response) => {
                     return;
                 }
 
+                const loginLink = `${process.env.CLIENT_URL}/login/${user.id}`
+
                 res.status(200).json({ message: 'User created successfully', id: user.id })
+                try {
+                    await sendWelcomeMail(email, name, loginLink)
+                    console.log("Welcome Email sent successfully")
+                } catch (error) {
+                    console.log("Error sending new User Email")
+                }
                 return;
             })
         }
@@ -522,12 +538,30 @@ app.put('/tasks/:taskId', async (req: Request, res: Response) => {
             res.json(400).json({ message: 'Task not found' });
         }
 
+
+
         const updatedTask = await editTask(taskId, payload.name, payload.content, payload.assignedByEmail, payload.assignedToEmails, payload.columnId, payload.startDate, payload.dueDate);
 
         if (!updatedTask) {
             res.json(400).json({ message: 'Error updating Task' })
         }
         res.status(200).json({ message: 'Task updated successfully' })
+
+        if (JSON.stringify(task.assignedToEmails) !== JSON.stringify(payload.assignedToEmails)) {
+            const unmatchedEmails = payload.assignedToEmails.filter(
+                (email: string) => !task.assignedToEmails.includes(email)
+            );
+
+            if (unmatchedEmails && unmatchedEmails.length > 0) {
+                try {
+                    await assignedTaskMail(unmatchedEmails, payload.name, payload.assignedByEmail)
+                    console.log("Task Alert Sent")
+                } catch (error) {
+                    console.log("Error sending task alert")
+                }
+            }
+        }
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
