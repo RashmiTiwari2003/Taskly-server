@@ -538,8 +538,6 @@ app.put('/tasks/:taskId', async (req: Request, res: Response) => {
             res.json(400).json({ message: 'Task not found' });
         }
 
-
-
         const updatedTask = await editTask(taskId, payload.name, payload.content, payload.assignedByEmail, payload.assignedToEmails, payload.columnId, payload.startDate, payload.dueDate);
 
         if (!updatedTask) {
@@ -555,7 +553,7 @@ app.put('/tasks/:taskId', async (req: Request, res: Response) => {
             if (unmatchedEmails && unmatchedEmails.length > 0) {
                 try {
                     await assignedTaskMail(unmatchedEmails, payload.name, payload.assignedByEmail)
-                    console.log("Task Alert Sent to Users")
+                    console.log("Task Alert Sent")
                 } catch (error) {
                     console.log("Error sending task alert")
                 }

@@ -389,7 +389,11 @@ export const disconnectDB = async () => {
 }
 
 export async function sendWelcomeMail(email: string, name: string, loginLink: string): Promise<void> {
-    const textBody = `Hey ${name},
+    const info = await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: `${email}`,
+        subject: 'Welcome to Taskly',
+        text: `Hey ${name},
         
 Welcome to Taskly - we're thrilled to have you on board! 🚀
 
@@ -403,13 +407,7 @@ If you ever need assistance or have any questions, feel free to reach out to our
 
 Let's make great things happen together! 🎯
 Happy tasking,
-The Taskly Team`;
-
-    const info = await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: `${email}`,
-        subject: 'Welcome to Taskly',
-        text: textBody
+The Taskly Team`
     });
 }
 
